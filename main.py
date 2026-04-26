@@ -7,7 +7,8 @@ import time
 import random
 
 # Инициализация бота
-bot = telebot.TeleBot('8336228498:AAEBXOpuTyy-ACrXqvUKYvq-J8j5CaoJ86o')
+bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'))
+
 
 # --- 1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И БАЗЫ ДАННЫХ ---
 convert_mode = 'usd'
