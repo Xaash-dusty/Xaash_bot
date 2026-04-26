@@ -36,7 +36,7 @@ quiz_score = 0
 quiz_data = [
     {"question": "Какая планета самая большая?", "options": ["Марс", "Юпитер", "Сатурн"], "correct": "Юпитер"},
     {"question": "Сколько полосок на флаге США?", "options": ["10", "13", "15"], "correct": "13"},
-    {"question": "Какой язык программирования мы учим?", "options": ["Java", "Python", "C++"], "correct": "Python"}
+    {"question": "Какой язык программирования мы учим?", "options": ["Java", "Python", "C++"], "correct": "Python"},
     {"question": "2+2*2?", "options": ["8", "4", "6"], "correct": "6"}
 ]
 
