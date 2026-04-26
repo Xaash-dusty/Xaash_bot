@@ -5,32 +5,29 @@ from datetime import datetime
 import os
 import time
 import random
-
 from flask import Flask
 from threading import Thread
 
+# --- 0. ПРЕДОТВРАЩЕНИЕ ЗАСЫПАНИЯ (KEEP ALIVE) ---
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "I'm alive"
+    return "Status: Online"
 
 def run():
     app.run(host='0.0.0.0', port=8080)
 
 def keep_alive():
     t = Thread(target=run)
+    t.daemon = True
     t.start()
 
-# Сразу вызываем функцию
 keep_alive()
 
-
-# Инициализация бота
+# --- 1. НАСТРОЙКИ И ДАННЫЕ ---
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'))
 
-
-# --- 1. ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ И БАЗЫ ДАННЫХ ---
 convert_mode = 'usd'
 quiz_score = 0
 quiz_data = [
@@ -42,11 +39,13 @@ quiz_data = [
 
 # --- 2. ФУНКЦИИ-ПОМОЩНИКИ ---
 
-# Работа с файлами (Задачи)
 def save_tasks(tasks_list):
-    with open("tasks.txt", "w", encoding="utf-8") as f:
-        for task in tasks_list:
-            f.write(task + "\n")
+    try:
+        with open("tasks.txt", "w", encoding="utf-8") as f:
+            for task in tasks_list:
+                f.write(task + "\n")
+    except Exception as e:
+        print(f"Ошибка сохранения: {e}")
 
 def load_tasks():
     if os.path.exists("tasks.txt"):
@@ -56,138 +55,141 @@ def load_tasks():
 
 tasks = load_tasks()
 
-# Работа с банком (Валюта)
 def get_rates():
     try:
         rates = ExchangeRates(datetime.now())
         return rates['USD'].value, rates['EUR'].value
-    except:
+    except Exception as e:
+        print(f"Ошибка банка: {e}")
         return None, None
-
-# Показ вопроса (Викторина)
-def show_quiz_question(message, q_index):
-    q = quiz_data[q_index]
-    markup = types.InlineKeyboardMarkup()
-    for option in q['options']:
-        markup.add(types.InlineKeyboardButton(option, callback_data=f"quiz|{q_index}|{option}"))
-    bot.send_message(message.chat.id, f"Вопрос №{q_index + 1}: {q['question']}", reply_markup=markup)
 
 # --- 3. ГЛАВНОЕ МЕНЮ ---
 
-@bot.message_handler(commands=['start', 'menu'])
+@bot.message_handler(commands=['start', 'menu', 'help'])
 def main_menu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn1 = types.KeyboardButton("📝 Задачи")
-    btn2 = types.KeyboardButton("💰 Валюта")
-    btn3 = types.KeyboardButton("🎮 Викторина")
-    markup.add(btn1, btn2, btn3)
-    bot.send_message(message.chat.id, "🏠 Главное меню. Выбери раздел:", reply_markup=markup)
+    markup.add("📝 Задачи", "💰 Валюта", "🎮 Викторина")
+    
+    welcome_text = (
+        f"👋 Привет, {message.from_user.first_name}!\n\n"
+        "Я твой многофункциональный помощник.\n"
+        "Выбери нужный раздел в меню ниже: 👇"
+    )
+    bot.send_message(message.chat.id, welcome_text, reply_markup=markup)
 
-# --- 4. ОБРАБОТКА ТЕКСТА ---
+# --- 4. ОСНОВНОЙ ОБРАБОТЧИК ---
 
 @bot.message_handler(content_types=['text'])
 def handle_all_messages(message):
     global convert_mode, tasks, quiz_score
 
-    # ПЕРЕКЛЮЧЕНИЕ РАЗДЕЛОВ
+    # Переход в разделы
     if message.text == "📝 Задачи":
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add("📋 Список дел", "🗑 Очистить всё", "🏠 В меню")
-        bot.send_message(message.chat.id, "Раздел ЗАДАЧИ. Напиши текст, чтобы добавить дело в список.", reply_markup=markup)
+        bot.send_message(message.chat.id, "📍 Раздел ЗАДАЧИ\nНапиши текст, чтобы добавить его в список дел.", reply_markup=markup)
 
     elif message.text == "💰 Валюта":
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add("🇺🇸 Курс USD", "🇪🇺 Курс EUR", "🔄 Перевод в EUR", "🏠 В меню")
-        bot.send_message(message.chat.id, "Раздел ВАЛЮТА. Введи число для перевода или узнай курс.", reply_markup=markup)
+        bot.send_message(message.chat.id, "📍 Раздел ВАЛЮТА\nУзнай курс или введи число для конвертации.", reply_markup=markup)
 
     elif message.text == "🎮 Викторина":
         quiz_score = 0
-        bot.send_message(message.chat.id, "Начинаем игру!")
+        bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего вопросов {len(quiz_data)}. Удачи!")
         show_quiz_question(message, 0)
 
     elif message.text == "🏠 В меню":
         convert_mode = 'usd'
         main_menu(message)
 
-    # ЛОГИКА ВАЛЮТ
-    elif message.text == "🇺🇸 Курс USD" or message.text == "🇪🇺 Курс EUR":
+    # Логика ВАЛЮТ
+    elif message.text in ["🇺🇸 Курс USD", "🇪🇺 Курс EUR"]:
         usd, eur = get_rates()
         if usd:
-            res = usd if "USD" in message.text else eur
-            bot.send_message(message.chat.id, f"Текущий курс: {res} руб.")
+            val = usd if "USD" in message.text else eur
+            bot.send_message(message.chat.id, f"📈 Текущий курс ЦБ: {val} руб.")
         else:
-            bot.send_message(message.chat.id, "Ошибка связи с банком.")
+            bot.send_message(message.chat.id, "⚠️ Банк временно недоступен.")
 
     elif message.text == "🔄 Перевод в EUR":
         convert_mode = 'eur'
-        bot.send_message(message.chat.id, "Режим изменен на ЕВРО 🇪🇺 Вводи сумму.")
+        bot.send_message(message.chat.id, "🔄 Режим изменен. Теперь я перевожу рубли в ЕВРО.")
 
-    # ЛОГИКА ЗАДАЧ
+    # Логика ЗАДАЧ
     elif message.text == "📋 Список дел":
         if not tasks:
-            bot.send_message(message.chat.id, "Список пуст!")
+            bot.send_message(message.chat.id, "Твой список пока пуст. ✨")
         else:
-            res = "Твои задачи:\n" + "\n".join([f"{i+1}. {t}" for i, t in enumerate(tasks)])
-            bot.send_message(message.chat.id, f"{res}\n\n(Введи номер, чтобы удалить)")
+            res = "🗒 Твои задачи:\n" + "\n".join([f"{i+1}. {t}" for i, t in enumerate(tasks)])
+            bot.send_message(message.chat.id, f"{res}\n\n💡 Введи номер задачи, чтобы удалить её.")
 
     elif message.text == "🗑 Очистить всё":
         tasks.clear()
         save_tasks(tasks)
-        bot.send_message(message.chat.id, "Список очищен 🧹")
+        bot.send_message(message.chat.id, "🧹 Список полностью очищен.")
 
-    # ОБРАБОТКА ЧИСЕЛ (Удаление задач ИЛИ Конвертация)
+    # Обработка ЧИСЕЛ (Удаление или Конвертация)
     elif message.text.isdigit():
-        val = int(message.text)
-        # Если это может быть номером задачи
-        if tasks and 0 < val <= len(tasks):
-            removed = tasks.pop(val - 1)
+        num = int(message.text)
+        # Если это номер задачи
+        if tasks and 0 < num <= len(tasks):
+            removed = tasks.pop(num - 1)
             save_tasks(tasks)
-            bot.send_message(message.chat.id, f"Удалено: {removed} ✅")
-        # Иначе считаем валюту
+            bot.send_message(message.chat.id, f"✅ Выполнено и удалено: {removed}")
+        # Иначе это сумма для валюты
         else:
             usd, eur = get_rates()
             if usd:
                 rate = eur if convert_mode == 'eur' else usd
-                currency = "EUR" if convert_mode == 'eur' else "USD"
-                res = val / rate
-                bot.send_message(message.chat.id, f"{val} руб. = {round(res, 2)} {currency}")
+                curr = "EUR 💶" if convert_mode == 'eur' else "USD 💵"
+                res = num / rate
+                bot.send_message(message.chat.id, f"💰 {num} руб. = {round(res, 2)} {curr}")
 
-    # ДОБАВЛЕНИЕ НОВОЙ ЗАДАЧИ (если текст не подошел под кнопки)
+    # Просто ввод текста (Новая задача)
     else:
-        if len(message.text) < 50:
+        if len(message.text) < 60:
             tasks.append(message.text)
             save_tasks(tasks)
-            bot.send_message(message.chat.id, f"Добавлено в задачи: {message.text} ✅")
+            bot.send_message(message.chat.id, f"📝 Добавлено в список: {message.text}")
         else:
-            bot.send_message(message.chat.id, "Слишком длинно!")
+            bot.send_message(message.chat.id, "❌ Текст слишком длинный (макс. 60 симв.)")
 
-# --- 5. ОБРАБОТКА КНОПОК ВИКТОРИНЫ ---
+# --- 5. ЛОГИКА ВИКТОРИНЫ ---
+
+def show_quiz_question(message, q_index):
+    q = quiz_data[q_index]
+    markup = types.InlineKeyboardMarkup()
+    for option in q['options']:
+        markup.add(types.InlineKeyboardButton(option, callback_data=f"quiz|{q_index}|{option}"))
+    bot.send_message(message.chat.id, f"❓ {q['question']}", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('quiz'))
 def handle_quiz(call):
     global quiz_score
-    bot.answer_callback_query(call.id)
+    # Убираем часики и показываем уведомление сверху
+    bot.answer_callback_query(call.id, text="Ответ принят!")
     
-    # Разбираем данные: quiz|индекс|ответ
     _, q_index, user_answer = call.data.split('|')
     q_index = int(q_index)
     
     correct = quiz_data[q_index]['correct']
     if user_answer == correct:
         quiz_score += 1
-        text = f"✅ Верно! {user_answer}"
+        res_text = f"✅ Верно! Это {user_answer}."
     else:
-        text = f"❌ Нет, правильно: {correct}"
+        res_text = f"❌ Ошибка. Правильный ответ: {correct}."
     
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=text)
+    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=res_text)
     
     next_q = q_index + 1
     if next_q < len(quiz_data):
         time.sleep(1.5)
         show_quiz_question(call.message, next_q)
     else:
-        bot.send_message(call.message.chat.id, f"🏁 Конец! Очки: {quiz_score} из {len(quiz_data)}")
+        bot.send_message(call.message.chat.id, f"🏁 Игра окончена!\nТвой результат: {quiz_score} из {len(quiz_data)}")
 
-# Запуск
-print("Супер-Бот Xaash запущен и ждет команд!")
-bot.infinity_polling(none_stop=True)
+# --- ЗАПУСК ---
+if __name__ == '__main__':
+    print("Супер-Бот Xaash запущен 24/7!")
+    bot.infinity_polling(none_stop=True)
