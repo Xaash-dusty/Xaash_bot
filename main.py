@@ -29,6 +29,7 @@ keep_alive()
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'))
 
 convert_mode = 'usd'
+current_action = None
 quiz_score = 0
 quiz_data = [
     {"question": "Какая планета самая большая?", "options": ["Марс", "Юпитер", "Сатурн"], "correct": "Юпитер"},
@@ -132,8 +133,9 @@ def handle_all_messages(message):
     elif message.text == "🏠 В меню":
         convert_mode = 'usd'
         main_menu(message)
-
-    # Логика ВАЛЮТ
+        
+        
+    # --- ЛОГИКА ВАЛЮТ ---
     elif message.text in ["🇺🇸 Курс USD", "🇪🇺 Курс EUR"]:
         usd, eur = get_rates()
         if usd:
@@ -144,51 +146,71 @@ def handle_all_messages(message):
 
     elif message.text == "🔄 Перевод в EUR":
         convert_mode = 'eur'
-        bot.send_message(message.chat.id, "🔄 Режим изменен. Теперь я перевожу рубли в ЕВРО.")
+        bot.send_message(message.chat.id, "🔄 Режим изменен. Теперь я перевожу рубли в ЕВРО. Введи сумму цифрами:")
 
-    # Логика ЗАДАЧ
+    # --- ЛОГИКА ЗАДАЧ ---
     elif message.text == "📋 Список дел":
         if not tasks:
             bot.send_message(message.chat.id, "Твой список пока пуст. ✨")
         else:
             res = "🗒 Твои задачи:\n" + "\n".join([f"{i+1}. {t}" for i, t in enumerate(tasks)])
-            bot.send_message(message.chat.id, f"{res}\n\n💡 Введи номер задачи, чтобы удалить её.")
+            bot.send_message(message.chat.id, f"{res}\n\n💡 Нажми «❌ Удалить», чтобы стереть задачу.")
 
     elif message.text == "🗑 Очистить всё":
         if not tasks:
-            bot.send_message(message.chat.id, "Список итак пуст.")
+            bot.send_message(message.chat.id, "Список и так пуст.")
         else:
-            bot.send_message(message.chat.id, "🧹 Список полностью очищен.")
             tasks.clear()
             save_tasks(tasks)
+            bot.send_message(message.chat.id, "🧹 Список полностью очищен.")
         
     elif message.text == "❌ Удалить":
-        num = int(message.text)
-        # Если это номер задачи
-        if tasks and 0 < num <= len(tasks):
-            removed = tasks.pop(num - 1)
-            save_tasks(tasks)
-            bot.send_message(message.chat.id, f"✅ Выполнено и удалено: {removed}")
+        if not tasks:
+            bot.send_message(message.chat.id, "Удалять нечего!")
+        else:
+            global current_action
+            current_action = "deleting"
+            bot.send_message(message.chat.id, "🔢 Введи НОМЕР задачи, которую хочешь удалить:")
     
     elif message.text == "➕ Добавить":
-        if len(message.text) < 50:
-            tasks.append(message.text)
-            save_tasks(tasks)
-            bot.send_message(message.chat.id, f"📝 Добавлено в список: {message.text}")
-        else:
-            bot.send_message(message.chat.id, "❌ Текст слишком длинный (макс. 50 симв.)")
-        
+        current_action = "adding"
+        bot.send_message(message.chat.id, "🖊 Напиши, что добавить в список (до 50 симв.):")
 
-    # Обработка ЧИСЕЛ (Конвертация)
-    elif message.text.isdigit():
-        num = int(message.text)
-        usd, eur = get_rates()
-        if usd:
-            rate = eur if convert_mode == 'eur' else usd
-            curr = "EUR 💶" if convert_mode == 'eur' else "USD 💵"
-            res = num / rate
-            bot.send_message(message.chat.id, f"💰 {num} руб. = {round(res, 2)} {curr}")
+    # --- ОБРАБОТКА ВВОДА (Действия в режимах) ---
+    else:
+        # Если юзер в режиме добавления
+        if current_action == "adding":
+            if len(message.text) < 50:
+                tasks.append(message.text)
+                save_tasks(tasks)
+                bot.send_message(message.chat.id, f"✅ Добавлено: {message.text}")
+                current_action = None # Сброс
+            else:
+                bot.send_message(message.chat.id, "❌ Слишком длинно!")
 
+        # Если юзер в режиме удаления
+        elif current_action == "deleting":
+            if message.text.isdigit():
+                num = int(message.text)
+                if 0 < num <= len(tasks):
+                    removed = tasks.pop(num - 1)
+                    save_tasks(tasks)
+                    bot.send_message(message.chat.id, f"🗑 Удалено: {removed}")
+                    current_action = None # Сброс
+                else:
+                    bot.send_message(message.chat.id, "❌ Нет такого номера!")
+            else:
+                bot.send_message(message.chat.id, "🔢 Введи именно ЧИСЛО.")
+
+        # Если просто введено число (конвертация)
+        elif message.text.isdigit():
+            num = int(message.text)
+            usd, eur = get_rates()
+            if usd:
+                rate = eur if convert_mode == 'eur' else usd
+                curr = "EUR 💶" if convert_mode == 'eur' else "USD 💵"
+                res = num / rate
+                bot.send_message(message.chat.id, f"💰 {num} руб. = {round(res, 2)} {curr}")
 
 # --- 5. ЛОГИКА ВИКТОРИНЫ ---
 
@@ -202,7 +224,6 @@ def show_quiz_question(message, q_index):
 @bot.callback_query_handler(func=lambda call: call.data.startswith('quiz'))
 def handle_quiz(call):
     global quiz_score
-    # Убираем часики и показываем уведомление сверху
     bot.answer_callback_query(call.id, text="Ответ принят!")
     
     _, q_index, user_answer = call.data.split('|')
@@ -226,5 +247,7 @@ def handle_quiz(call):
 
 # --- ЗАПУСК ---
 if __name__ == '__main__':
-    print("Супер-Бот Xaash запущен 24/7!")
+    # Обязательно добавь переменную current_action в начало кода (Часть 1)
+    current_action = None 
+    print("Супер-Бот Xaash запущен!")
     bot.infinity_polling(none_stop=True)
