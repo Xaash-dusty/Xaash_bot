@@ -33,13 +33,14 @@ quiz_score = 0
 quiz_data = [
     {"question": "Какая планета самая большая?", "options": ["Марс", "Юпитер", "Сатурн"], "correct": "Юпитер"},
     {"question": "Сколько полосок на флаге США?", "options": ["10", "13", "15"], "correct": "13"},
-    {"question": "Какой язык программирования мы учим?", "options": ["Java", "Python", "C++"], "correct": "Python"},
+    {"question": "На каком языке программирования обычно пишут простых ТГ ботов?", "options": ["Java", "Python", "C++"], "correct": "Python"},
     {"question": "2+2*2?", "options": ["8", "4", "6"], "correct": "6"}
 ]
 
 # --- 2. ФУНКЦИИ-ПОМОЩНИКИ ---
 
 def save_tasks(tasks_list):
+    """Сохраняет список задач в текстовый файл."""
     try:
         with open("tasks.txt", "w", encoding="utf-8") as f:
             for task in tasks_list:
@@ -48,6 +49,7 @@ def save_tasks(tasks_list):
         print(f"Ошибка сохранения: {e}")
 
 def load_tasks():
+    """Загружает задачи из файла при старте."""
     if os.path.exists("tasks.txt"):
         with open("tasks.txt", "r", encoding="utf-8") as f:
             return [line.strip() for line in f.readlines()]
@@ -56,6 +58,7 @@ def load_tasks():
 tasks = load_tasks()
 
 def get_rates():
+    """Запрашивает свежие курсы валют у ЦБ РФ."""
     try:
         rates = ExchangeRates(datetime.now())
         return rates['USD'].value, rates['EUR'].value
@@ -63,12 +66,38 @@ def get_rates():
         print(f"Ошибка банка: {e}")
         return None, None
 
-# --- 3. ГЛАВНОЕ МЕНЮ ---
+# --- 3. КОМАНДЫ (БЫСТРЫЙ ДОСТУП) ---
 
-@bot.message_handler(commands=['start', 'menu', 'help'])
+@bot.message_handler(commands=['tasks'])
+def fast_tasks(message):
+    """Быстрый переход к задачам через /tasks."""
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("📋 Список дел", "➕ Добавить", "❌ Удалить")
+    markup.add("🗑 Очистить всё", "🏠 В меню")
+    bot.send_message(message.chat.id, "📝 Меню задач открыто!", reply_markup=markup)
+
+@bot.message_handler(commands=['help'])
+def help_command(message):
+    """Справка по командам."""
+    help_text = (
+        "❓ **Шпаргалка по боту:**\n\n"
+        "✅ **Задачи:** Нажми «➕ Добавить» чтобы добавить задачу и «❌ Удалить» чтобы удалить, а также можешь увидеть свой список задач или полностью его отчистить одной кнопкой.\n"
+        "📈 **Курсы:** В разделе Валюта можно увидеть курсы доллара и евро, а также конвертировать рубли в данные валюты.\n"
+        f"🎮 **Игры:** Викторина на {len(quiz_data)} вопроса. Попробуй ответить на всё!\n"
+        "Напиши /help для вызова этого сообщения.\n"
+        "Для быстрого доступа к задачам /tasks.\n"
+        "Чтобы перейти в главное меню /start или /menu.\n"
+        "\nИспользуй кнопки меню для навигации!"
+    )
+    bot.send_message(message.chat.id, help_text, parse_mode='Markdown')
+
+# --- 3.1. ГЛАВНОЕ МЕНЮ ---
+
+@bot.message_handler(commands=['start', 'menu'])
 def main_menu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.add("📝 Задачи", "💰 Валюта", "🎮 Викторина")
+    markup.row("📝 Задачи", "💰 Валюта")
+    markup.row("🎮 Викторина")
     
     welcome_text = (
         f"👋 Привет, {message.from_user.first_name}!\n\n"
@@ -86,8 +115,9 @@ def handle_all_messages(message):
     # Переход в разделы
     if message.text == "📝 Задачи":
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add("📋 Список дел", "🗑 Очистить всё", "🏠 В меню")
-        bot.send_message(message.chat.id, "📍 Раздел ЗАДАЧИ\nНапиши текст, чтобы добавить его в список дел.", reply_markup=markup)
+        markup.add("📋 Список дел", "➕ Добавить", "❌ Удалить")
+        markup.add("🗑 Очистить всё", "🏠 В меню")
+        bot.send_message(message.chat.id, "📍 Раздел ЗАДАЧИ\nВыбери действие со списком задач в меню ниже.", reply_markup=markup)
 
     elif message.text == "💰 Валюта":
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -125,35 +155,40 @@ def handle_all_messages(message):
             bot.send_message(message.chat.id, f"{res}\n\n💡 Введи номер задачи, чтобы удалить её.")
 
     elif message.text == "🗑 Очистить всё":
-        tasks.clear()
-        save_tasks(tasks)
-        bot.send_message(message.chat.id, "🧹 Список полностью очищен.")
-
-    # Обработка ЧИСЕЛ (Удаление или Конвертация)
-    elif message.text.isdigit():
+        if not tasks:
+            bot.send_message(message.chat.id, "Список итак пуст.")
+        else:
+            bot.send_message(message.chat.id, "🧹 Список полностью очищен.")
+            tasks.clear()
+            save_tasks(tasks)
+        
+    elif message.text == "❌ Удалить":
         num = int(message.text)
         # Если это номер задачи
         if tasks and 0 < num <= len(tasks):
             removed = tasks.pop(num - 1)
             save_tasks(tasks)
             bot.send_message(message.chat.id, f"✅ Выполнено и удалено: {removed}")
-        # Иначе это сумма для валюты
-        else:
-            usd, eur = get_rates()
-            if usd:
-                rate = eur if convert_mode == 'eur' else usd
-                curr = "EUR 💶" if convert_mode == 'eur' else "USD 💵"
-                res = num / rate
-                bot.send_message(message.chat.id, f"💰 {num} руб. = {round(res, 2)} {curr}")
-
-    # Просто ввод текста (Новая задача)
-    else:
-        if len(message.text) < 60:
+    
+    elif message.text == "➕ Добавить":
+        if len(message.text) < 50:
             tasks.append(message.text)
             save_tasks(tasks)
             bot.send_message(message.chat.id, f"📝 Добавлено в список: {message.text}")
         else:
-            bot.send_message(message.chat.id, "❌ Текст слишком длинный (макс. 60 симв.)")
+            bot.send_message(message.chat.id, "❌ Текст слишком длинный (макс. 50 симв.)")
+        
+
+    # Обработка ЧИСЕЛ (Конвертация)
+    elif message.text.isdigit():
+        num = int(message.text)
+        usd, eur = get_rates()
+        if usd:
+            rate = eur if convert_mode == 'eur' else usd
+            curr = "EUR 💶" if convert_mode == 'eur' else "USD 💵"
+            res = num / rate
+            bot.send_message(message.chat.id, f"💰 {num} руб. = {round(res, 2)} {curr}")
+
 
 # --- 5. ЛОГИКА ВИКТОРИНЫ ---
 
