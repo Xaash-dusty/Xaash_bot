@@ -50,7 +50,7 @@ def get_rates():
 @bot.message_handler(commands=['tasks'])
 def fast_tasks(message):
     """Быстрый переход к задачам через /tasks."""
-    action=None
+    user_actions[uid] = None
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📋 Список дел", "➕ Добавить", "❌ Удалить")
     markup.add("🗑 Очистить всё", "🏠 В меню")
@@ -59,7 +59,7 @@ def fast_tasks(message):
 @bot.message_handler(commands=['quiz'])
 def fast_quiz(message):
     """Быстрый переход к викторине через /quiz."""
-    action=None
+    user_actions[uid] = None
     user_scores[message.from_user.id] = 0
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row("📝 Задачи", "💰 Валюта")
@@ -109,7 +109,7 @@ def help_command(message):
 @bot.message_handler(commands=['start', 'menu'])
 def main_menu(message):
     '''ГЛАВНОЕ МЕНЮ'''
-    action=None
+    user_actions[uid] = None
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row("📝 Задачи", "💰 Валюта")
     markup.row("🎮 Викторина")
@@ -243,6 +243,7 @@ def handle_all_messages(message):
             except Exception as e:
                 bot.send_message(message.chat.id, f"Ошибка: {e}")
         else:
+            if message.text != "я":
             # Если никакого режима нет и это не команда — тогда уже пишем "Не понимаю" или просто текст
             bot.send_message(message.chat.id, "❓ Я тебя не понимаю. Используй кнопки меню.")
             
