@@ -210,7 +210,8 @@ def handle_all_messages(message):
                     num = float(message.text.replace(',', '.'))
                     usd, eur = get_rates()
                     if usd is not None:
-                        rate = eur if user_modes[uid] == 'eur' else usd
+                        # Превращаем Decimal из банка в обычное число для расчетов
+                        rate = float(eur if user_modes[uid] == 'eur' else usd)
                         res = num / rate
                         bot.send_message(message.chat.id, f"💰 {num} руб. = {res:.2f} {user_modes[uid].upper()}")
                         # Здесь режим НЕ сбрасываем, чтобы юзер мог вводить числа дальше
