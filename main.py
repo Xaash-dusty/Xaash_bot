@@ -180,7 +180,7 @@ def handle_all_messages(message):
             bot.send_message(message.chat.id, "Список и так пуст.")
 
     # ОБРАБОТКА ВВОДА (Действия в режимах)
-    else:
+    else:       #другой текст или число
         action = user_actions.get(uid) # Безопасно получаем действие
         
         if action == "adding":
@@ -204,7 +204,7 @@ def handle_all_messages(message):
             else:
                 bot.send_message(message.chat.id, "🔢 Введи номер числом.")
 
-        elif action == "converting":
+        elif action == "converting":        #выбрано "🔄 Конвертер" текст или число
             if message.text.isdigit():
                 try:
                     num = float(message.text.replace(',', '.'))
@@ -218,11 +218,13 @@ def handle_all_messages(message):
                         bot.send_message(message.chat.id, "⚠️ Ошибка банка. Попробуй позже.")
                 except ValueError:
                     bot.send_message(message.chat.id, "🔢 Введи сумму цифрами (например: 100 или 50.5)")
+                except Exception as e:
+                    bot.send_message(message.chat.id, f"Ошибка: {e}")
             else:
                 bot.send_message(message.chat.id, "Не число")
 
         else:
-            # Если никакого режима нет и это не команда — тогда уже пишем "Не понимаю"
+            # Если никакого режима нет и это не команда — тогда уже пишем "Не понимаю" или просто текст
             bot.send_message(message.chat.id, "❓ Я тебя не понимаю. Используй кнопки меню.")
 
 
