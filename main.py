@@ -50,6 +50,7 @@ def get_rates():
 @bot.message_handler(commands=['tasks'])
 def fast_tasks(message):
     """Быстрый переход к задачам через /tasks."""
+    uid = message.from_user.id
     user_actions[uid] = None
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📋 Список дел", "➕ Добавить", "❌ Удалить")
@@ -59,6 +60,7 @@ def fast_tasks(message):
 @bot.message_handler(commands=['quiz'])
 def fast_quiz(message):
     """Быстрый переход к викторине через /quiz."""
+    uid = message.from_user.id
     user_actions[uid] = None
     user_scores[message.from_user.id] = 0
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -109,6 +111,7 @@ def help_command(message):
 @bot.message_handler(commands=['start', 'menu'])
 def main_menu(message):
     '''ГЛАВНОЕ МЕНЮ'''
+    uid = message.from_user.id
     user_actions[uid] = None
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row("📝 Задачи", "💰 Валюта")
@@ -128,6 +131,11 @@ def handle_all_messages(message):
     uid = message.from_user.id
     text = message.text.lower()
     
+    # Инициализация данных пользователя, если их нет
+    if uid not in user_tasks: user_tasks[uid] = []
+    if uid not in user_modes: user_modes[uid] = 'usd'
+    if uid not in user_actions: user_actions[uid] = None
+    
     # ЛОГИРОВАНИЕ АДМИНУ
     if uid != ADMIN_ID:
         first_name = message.from_user.first_name if message.from_user.first_name else "нет имени"
@@ -138,15 +146,10 @@ def handle_all_messages(message):
                  f"💬 Текст: {message.text}"
         bot.send_message(ADMIN_ID, report)
         if text == "я":
-            bot.send_message(ADMIN_ID, "Вы — мой дорогой пользователь, а я — ваш верный помощник! 😊")
+            bot.send_message(message.chat.id, "Вы — мой дорогой пользователь, а я — ваш верный помощник! 😊")
     else:
         if text == "я":
-            bot.send_message(ADMIN_ID, 'Вы мой Хозяин')
-
-    # Инициализация данных пользователя, если их нет
-    if uid not in user_tasks: user_tasks[uid] = []
-    if uid not in user_modes: user_modes[uid] = 'usd'
-    if uid not in user_actions: user_actions[uid] = None
+            bot.send_message(message.chat.id, 'Вы мой Хозяин👑')
 
     # НАВИГАЦИЯ
     if message.text == "📝 Задачи":
