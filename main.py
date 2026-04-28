@@ -201,11 +201,11 @@ def handle_all_messages(message):
                 else:
                     bot.send_message(message.chat.id, "❌ Нет задачи с таким номером!")
             else:
-                bot.send_message(message.chat.id, "🔢 Введи номер числом.") 
-            
-        elif message.text.isdigit() and action == "converting":
+                bot.send_message(message.chat.id, "🔢 Введи номер числом.")
+
+        elif action == "converting":
             try:
-                num = int(message.text)
+                num = float(message.text.replace(',', '.'))
                 usd, eur = get_rates()
                 if usd is not None:
                     rate = eur if user_modes[uid] == 'eur' else usd
@@ -213,7 +213,7 @@ def handle_all_messages(message):
                     bot.send_message(message.chat.id, f"💰 {num} руб. = {res:.2f} {user_modes[uid].upper()}")
                     # Здесь режим НЕ сбрасываем, чтобы юзер мог вводить числа дальше
                 else:
-                        bot.send_message(message.chat.id, "⚠️ Ошибка банка. Попробуй позже.")
+                    bot.send_message(message.chat.id, "⚠️ Ошибка банка. Попробуй позже.")
             except ValueError:
                 bot.send_message(message.chat.id, "🔢 Введи сумму цифрами (например: 100 или 50.5)")
 
