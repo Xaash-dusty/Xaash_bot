@@ -21,7 +21,7 @@ keep_alive()
 
 # --- 1. НАСТРОЙКИ И ДАННЫЕ ---
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'))
-ADMIN_ID = 7106093310 
+ADMIN_ID = int(os.environ.get('ADMIN_ID', 0)) 
 
 quiz_data = [
     {"question": "Какая планета самая большая?", "options": ["Марс", "Юпитер", "Сатурн"], "correct": "Юпитер"},
@@ -150,6 +150,7 @@ def handle_all_messages(message):
         bot.send_message(message.chat.id, f"📈 Курс: {val} руб." if val else "⚠️ Ошибка банка")
 
     elif message.text == "🔄 Конвертер":
+        user_actions[uid] = "converting"
         markup = types.InlineKeyboardMarkup()
         mode = user_modes[uid]
         label = "➡️ На EUR" if mode == 'usd' else "➡️ На USD"
@@ -177,40 +178,49 @@ def handle_all_messages(message):
         else:
             bot.send_message(message.chat.id, "Список и так пуст.")
 
-    # ОБРАБОТКА ВВОДА (Действия)
+    # ОБРАБОТКА ВВОДА (Действия в режимах)
     else:
-        action = user_actions[uid]
+        action = user_actions.get(uid) # Безопасно получаем действие
+        
         if action == "adding":
             if len(message.text) < 50:
                 time_now = datetime.now().strftime("%H:%M")
                 user_tasks[uid].append(f"[{time_now}] {message.text}")
-                bot.send_message(message.chat.id, "✅ Добавлено")
+                bot.send_message(message.chat.id, "✅ Добавлено в твой список.")
                 user_actions[uid] = None
             else:
-                bot.send_message(message.chat.id, "❌ Слишком длинно!")
+                bot.send_message(message.chat.id, "❌ Слишком длинное название!")
+
         elif action == "deleting":
             if message.text.isdigit():
                 idx = int(message.text) - 1
                 if 0 <= idx < len(user_tasks[uid]):
-                    user_tasks[uid].pop(idx)
-                    bot.send_message(message.chat.id, "🗑 Удалено")
+                    removed = user_tasks[uid].pop(idx)
+                    bot.send_message(message.chat.id, f"🗑 Удалено: {removed}")
                     user_actions[uid] = None
                 else:
-                    bot.send_message(message.chat.id, "❌ Нет такого номера!")
+                    bot.send_message(message.chat.id, "❌ Нет задачи с таким номером!")
             else:
-                bot.send_message(message.chat.id, "🔢 Введи именно ЧИСЛО.")
-        else:
+                bot.send_message(message.chat.id, "🔢 Введи номер числом.")
+
+        elif action == "converting":
             try:
                 num = float(message.text.replace(',', '.'))
                 usd, eur = get_rates()
-                if usd:
+                if usd is not None:
                     rate = eur if user_modes[uid] == 'eur' else usd
                     res = num / rate
                     bot.send_message(message.chat.id, f"💰 {num} руб. = {res:.2f} {user_modes[uid].upper()}")
+                    # Здесь режим НЕ сбрасываем, чтобы юзер мог вводить числа дальше
                 else:
-                    bot.send_message(message.chat.id, "⚠️ Банк временно недоступен.")
-            except:
-                bot.send_message(message.chat.id, "Я тебя не понимаю. Используй меню или введи число.")
+                    bot.send_message(message.chat.id, "⚠️ Ошибка банка. Попробуй позже.")
+            except ValueError:
+                bot.send_message(message.chat.id, "🔢 Введи сумму цифрами (например: 100 или 50.5)")
+
+        else:
+            # Если никакого режима нет и это не команда — тогда уже пишем "Не понимаю"
+            bot.send_message(message.chat.id, "❓ Я тебя не понимаю. Используй кнопки меню.")
+
 
 # --- 5. CALLBACKS ---
 @bot.callback_query_handler(func=lambda call: True)
