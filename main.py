@@ -27,7 +27,7 @@ keep_alive()
 
 # --- 1. НАСТРОЙКИ И ДАННЫЕ ---
 bot = telebot.TeleBot(os.environ.get('BOT_TOKEN'))
-
+ADMIN_ID = 7106093310
 convert_mode = 'usd'
 current_action = None
 quiz_score = 0
@@ -106,11 +106,24 @@ def main_menu(message):
         "Выбери нужный раздел в меню ниже: 👇"
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup)
-
+    
 # --- 4. ОСНОВНОЙ ОБРАБОТЧИК ---
 
 @bot.message_handler(content_types=['text'])
 def handle_all_messages(message):
+    # --- ЛОГИРОВАНИЕ (вставляем сюда) ---
+    first_name = message.from_user.first_name if message.from_user.first_name else "нет имени"
+    username = message.from_user.username if message.from_user.username else "нет ника"
+    userID = message.from_user.id if message.from_user.id else "нет ID"
+    # 1. Сначала уведомляем админа (вас)
+    report = f"👤 От: {first_name} (@{username})\n" \
+             f"🆔 ID: {userID}\n" \
+             f"💬 Текст: {message.text}"
+    bot.send_message(ADMIN_ID, report) 
+    
+    # --- ДАЛЬШЕ ТВОЯ ЛОГИКА (Задачи, Валюта и т.д.) ---
+    
+    
     global convert_mode, tasks, quiz_score
 
     # Переход в разделы
