@@ -64,6 +64,16 @@ def fast_quiz(message):
     markup.row("🎮 Викторина")
     bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего вопросов {len(quiz_data)}. Удачи!\n\n`/help` — вызвать справку.")
     show_quiz_question(message, 0)
+    
+@bot.message_handler(commands=['quiz'])
+def fast_quiz(message):
+    """Быстрый переход к викторине через /quiz."""
+    user_scores[message.from_user.id] = 0
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.row("📝 Задачи", "💰 Валюта")
+    markup.row("🎮 Викторина")
+    bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего вопросов {len(quiz_data)}. Удачи!\n\n`/help` — вызвать справку.")
+    show_quiz_question(message, 0)
 
 @bot.message_handler(commands=['help'])
 def help_command(message):
@@ -113,17 +123,22 @@ def main_menu(message):
 def handle_all_messages(message):
     '''ОБРАБОТЧИК ТЕКСТА'''
     uid = message.from_user.id
+    text = message.text.lower()
     
     # ЛОГИРОВАНИЕ АДМИНУ
     if uid != ADMIN_ID:
         first_name = message.from_user.first_name if message.from_user.first_name else "нет имени"
         username = message.from_user.username if message.from_user.username else "нет ника"
-        userID = message.from_user.id if message.from_user.id else "нет ID"
         # 1. Сначала уведомляем админа (вас)
         report = f"👤 От: {first_name} (@{username})\n" \
-                 f"🆔 ID: {userID}\n" \
+                 f"🆔 ID: {uid}\n" \
                  f"💬 Текст: {message.text}"
         bot.send_message(ADMIN_ID, report)
+        if text == "я":
+            bot.send_message(ADMIN_ID, "Вы — мой дорогой пользователь, а я — ваш верный помощник! 😊")
+    else:
+        if text == "я":
+            bot.send_message(ADMIN_ID, 'Вы мой Хозяин')
 
     # Инициализация данных пользователя, если их нет
     if uid not in user_tasks: user_tasks[uid] = []
