@@ -1,7 +1,7 @@
 import telebot
 from telebot import types
 from pycbrf import ExchangeRates
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import os
 import time
 import random
@@ -76,7 +76,7 @@ def help_command(message):
         "• «➕ Добавить» — создать новую запись.\n"
         "• «❌ Удалить» — убрать задачу.\n"
         "• «🗑️ Очистить» — полное удаление списка.\n"
-        "• Быстрый доступ: `/tasks`\n\n"
+        "• Быстрый доступ: /tasks\n\n"
         
         "📈 **ВАЛЮТА**\n"
         "• Актуальные курсы USD и EUR.\n"
@@ -84,12 +84,12 @@ def help_command(message):
         
         f"🎮 **ВИКТОРИНА**\n"
         f"• Тест на {len(quiz_data)} вопроса. Проверь себя!\n"
-        "• Быстрый старт: `/quiz`\n\n"
+        "• Быстрый старт: /quiz\n\n"
         
         "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n"
         "📍 **БЫСТРЫЕ КОМАНДЫ:**\n"
-        "• `/start` или `/menu` — главное меню.\n"
-        "• `/help` — вызвать эту справку.\n\n"
+        "• /start или /menu — главное меню.\n"
+        "• /help — вызвать эту справку.\n\n"
         "✨ *Используй кнопки внизу для удобной навигации!*"
     )
     bot.send_message(message.chat.id, help_text, parse_mode='Markdown')
@@ -104,7 +104,7 @@ def main_menu(message):
     welcome_text = (
         f"👋 Привет, {message.from_user.first_name}!\n\n"
         "Я твой многофункциональный помощник.\n"
-        "Выбери нужный раздел в меню ниже: 👇18:52\n\n`/help` — вызвать справку."
+        "Выбери нужный раздел в меню ниже: 👇\n\n`/help` — вызвать справку."
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup)
 
@@ -188,7 +188,8 @@ def handle_all_messages(message):
         
         if action == "adding":
             if len(message.text) < 50:
-                time_now = datetime.now().strftime("%H:%M")
+                offset = timezone(timedelta(hours=3))
+                time_now = datetime.now(offset).strftime("%H:%M")
                 user_tasks[uid].append(f"[{time_now}] {message.text}")
                 bot.send_message(message.chat.id, f"✅ Добавлено: [{time_now}] {message.text}")
                 user_actions[uid] = None
@@ -208,28 +209,25 @@ def handle_all_messages(message):
                 bot.send_message(message.chat.id, "🔢 Введи номер числом.")
 
         elif action == "converting":        #выбрано "🔄 Конвертер" текст или число
-            if message.text.isdigit():
-                try:
-                    num = float(message.text.replace(',', '.'))
-                    usd, eur = get_rates()
-                    if usd is not None:
-                        # Превращаем Decimal из банка в обычное число для расчетов
-                        rate = float(eur if user_modes[uid] == 'eur' else usd)
-                        res = num / rate
-                        bot.send_message(message.chat.id, f"💰 {num} руб. = {res:.2f} {user_modes[uid].upper()}")
-                        # Здесь режим НЕ сбрасываем, чтобы юзер мог вводить числа дальше
-                    else:
-                        bot.send_message(message.chat.id, "⚠️ Ошибка банка. Попробуй позже.")
-                except ValueError:
-                    bot.send_message(message.chat.id, "🔢 Введи сумму цифрами (например: 100 или 50.5)")
-                except Exception as e:
-                    bot.send_message(message.chat.id, f"Ошибка: {e}")
-            else:
-                bot.send_message(message.chat.id, "Не число")
-
+            try:
+                num = float(message.text.replace(',', '.'))
+                usd, eur = get_rates()
+                if usd is not None:
+                    # Превращаем Decimal из банка в обычное число для расчетов
+                    rate = float(eur if user_modes[uid] == 'eur' else usd)
+                    res = num / rate
+                    bot.send_message(message.chat.id, f"💰 {num} руб. = {res:.2f} {user_modes[uid].upper()}")
+                    # Здесь режим НЕ сбрасываем, чтобы юзер мог вводить числа дальше
+                else:
+                    bot.send_message(message.chat.id, "⚠️ Ошибка банка. Попробуй позже.")
+            except ValueError:
+                bot.send_message(message.chat.id, "🔢 Введи сумму цифрами (например: 100 или 50.5)")
+            except Exception as e:
+                bot.send_message(message.chat.id, f"Ошибка: {e}")
         else:
             # Если никакого режима нет и это не команда — тогда уже пишем "Не понимаю" или просто текст
             bot.send_message(message.chat.id, "❓ Я тебя не понимаю. Используй кнопки меню.")
+            
 
 
 # --- 5. CALLBACKS ---
