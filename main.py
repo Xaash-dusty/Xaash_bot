@@ -50,6 +50,7 @@ def get_rates():
 @bot.message_handler(commands=['tasks'])
 def fast_tasks(message):
     """Быстрый переход к задачам через /tasks."""
+    action=None
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📋 Список дел", "➕ Добавить", "❌ Удалить")
     markup.add("🗑 Очистить всё", "🏠 В меню")
@@ -58,6 +59,7 @@ def fast_tasks(message):
 @bot.message_handler(commands=['quiz'])
 def fast_quiz(message):
     """Быстрый переход к викторине через /quiz."""
+    action=None
     user_scores[message.from_user.id] = 0
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row("📝 Задачи", "💰 Валюта")
@@ -65,15 +67,15 @@ def fast_quiz(message):
     bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего вопросов {len(quiz_data)}. Удачи!\n\n`/help` — вызвать справку.")
     show_quiz_question(message, 0)
     
-@bot.message_handler(commands=['quiz'])
-def fast_quiz(message):
-    """Быстрый переход к викторине через /quiz."""
-    user_scores[message.from_user.id] = 0
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    markup.row("📝 Задачи", "💰 Валюта")
-    markup.row("🎮 Викторина")
-    bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего вопросов {len(quiz_data)}. Удачи!\n\n`/help` — вызвать справку.")
-    show_quiz_question(message, 0)
+# @bot.message_handler(commands=['quiz'])
+# def fast_quiz(message):
+    # """Быстрый переход к викторине через /quiz."""
+    # user_scores[message.from_user.id] = 0
+    # markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    # markup.row("📝 Задачи", "💰 Валюта")
+    # markup.row("🎮 Викторина")
+    # bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего вопросов {len(quiz_data)}. Удачи!\n\n`/help` — вызвать справку.")
+    # show_quiz_question(message, 0)
 
 @bot.message_handler(commands=['help'])
 def help_command(message):
@@ -107,6 +109,7 @@ def help_command(message):
 @bot.message_handler(commands=['start', 'menu'])
 def main_menu(message):
     '''ГЛАВНОЕ МЕНЮ'''
+    action=None
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row("📝 Задачи", "💰 Валюта")
     markup.row("🎮 Викторина")
