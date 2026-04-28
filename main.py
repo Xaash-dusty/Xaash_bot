@@ -161,7 +161,7 @@ def handle_all_messages(message):
     elif message.text == "📋 Список дел":
         tasks = user_tasks[uid]
         res = "🗒 Твои задачи:\n" + "\n".join([f"{i+1}. {t}" for i, t in enumerate(tasks)]) if tasks else "Список пуст."
-        bot.send_message(message.chat.id, f"{res}\n\n💡 Нажми «❌ Удалить», чтобы стереть задачу.")
+        if tasks bot.send_message(message.chat.id, f"{res}\n\n💡 Нажми «❌ Удалить», чтобы стереть задачу.")
     elif message.text == "➕ Добавить":
         user_actions[uid] = "adding"
         bot.send_message(message.chat.id, "🖊 Напиши, что добавить в список (до 50 симв.):")
@@ -186,7 +186,7 @@ def handle_all_messages(message):
             if len(message.text) < 50:
                 time_now = datetime.now().strftime("%H:%M")
                 user_tasks[uid].append(f"[{time_now}] {message.text}")
-                bot.send_message(message.chat.id, "✅ Добавлено в твой список.")
+                bot.send_message(message.chat.id, f"✅ Добавлено: [{time_now}] {message.text}")
                 user_actions[uid] = None
             else:
                 bot.send_message(message.chat.id, "❌ Слишком длинное название!")
@@ -201,11 +201,11 @@ def handle_all_messages(message):
                 else:
                     bot.send_message(message.chat.id, "❌ Нет задачи с таким номером!")
             else:
-                bot.send_message(message.chat.id, "🔢 Введи номер числом.")
-
-        elif action == "converting":
+                bot.send_message(message.chat.id, "🔢 Введи номер числом.") 
+            
+        elif message.text.isdigit() and action == "converting":
             try:
-                num = float(message.text.replace(',', '.'))
+                num = int(message.text)
                 usd, eur = get_rates()
                 if usd is not None:
                     rate = eur if user_modes[uid] == 'eur' else usd
@@ -213,7 +213,7 @@ def handle_all_messages(message):
                     bot.send_message(message.chat.id, f"💰 {num} руб. = {res:.2f} {user_modes[uid].upper()}")
                     # Здесь режим НЕ сбрасываем, чтобы юзер мог вводить числа дальше
                 else:
-                    bot.send_message(message.chat.id, "⚠️ Ошибка банка. Попробуй позже.")
+                        bot.send_message(message.chat.id, "⚠️ Ошибка банка. Попробуй позже.")
             except ValueError:
                 bot.send_message(message.chat.id, "🔢 Введи сумму цифрами (например: 100 или 50.5)")
 
