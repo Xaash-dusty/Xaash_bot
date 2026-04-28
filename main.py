@@ -245,7 +245,7 @@ def handle_all_messages(message):
         else:
             if message.text != "я":
             # Если никакого режима нет и это не команда — тогда уже пишем "Не понимаю" или просто текст
-            bot.send_message(message.chat.id, "❓ Я тебя не понимаю. Используй кнопки меню.")
+                bot.send_message(message.chat.id, "❓ Я тебя не понимаю. Используй кнопки меню.")
             
 
 
