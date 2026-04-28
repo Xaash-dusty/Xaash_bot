@@ -161,7 +161,8 @@ def handle_all_messages(message):
     elif message.text == "📋 Список дел":
         tasks = user_tasks[uid]
         res = "🗒 Твои задачи:\n" + "\n".join([f"{i+1}. {t}" for i, t in enumerate(tasks)]) if tasks else "Список пуст."
-        if tasks bot.send_message(message.chat.id, f"{res}\n\n💡 Нажми «❌ Удалить», чтобы стереть задачу.")
+        if tasks:
+            bot.send_message(message.chat.id, f"{res}\n\n💡 Нажми «❌ Удалить», чтобы стереть задачу.")
     elif message.text == "➕ Добавить":
         user_actions[uid] = "adding"
         bot.send_message(message.chat.id, "🖊 Напиши, что добавить в список (до 50 симв.):")
