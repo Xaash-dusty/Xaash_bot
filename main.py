@@ -53,7 +53,7 @@ def fast_tasks(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add("📋 Список дел", "➕ Добавить", "❌ Удалить")
     markup.add("🗑 Очистить всё", "🏠 В меню")
-    bot.send_message(message.chat.id, "📝 Меню задач открыто!", reply_markup=markup)
+    bot.send_message(message.chat.id, "📝 Меню задач открыто!\n\n`/help` — вызвать справку.", reply_markup=markup)
 
 @bot.message_handler(commands=['quiz'])
 def fast_quiz(message):
@@ -62,7 +62,7 @@ def fast_quiz(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row("📝 Задачи", "💰 Валюта")
     markup.row("🎮 Викторина")
-    bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего вопросов {len(quiz_data)}. Удачи!")
+    bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего вопросов {len(quiz_data)}. Удачи!\n\n`/help` — вызвать справку.")
     show_quiz_question(message, 0)
 
 @bot.message_handler(commands=['help'])
@@ -104,7 +104,7 @@ def main_menu(message):
     welcome_text = (
         f"👋 Привет, {message.from_user.first_name}!\n\n"
         "Я твой многофункциональный помощник.\n"
-        "Выбери нужный раздел в меню ниже: 👇18:52"
+        "Выбери нужный раздел в меню ниже: 👇18:52\n\n`/help` — вызвать справку."
     )
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup)
 
@@ -136,7 +136,7 @@ def handle_all_messages(message):
     elif message.text == "💰 Валюта":
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup.add("🇺🇸 Курс USD", "🇪🇺 Курс EUR", "🔄 Конвертер", "🏠 В меню")
-        bot.send_message(message.chat.id, "📍 Раздел ВАЛЮТА\nВыбери курс или нажми «Конвертер»", reply_markup=markup)
+        bot.send_message(message.chat.id, "📍 Раздел ВАЛЮТА\nВыбери курс или нажми «Конвертер»\n\n`/help` — вызвать справку.", reply_markup=markup)
     elif message.text == "🎮 Викторина":
         fast_quiz(message)
     elif message.text == "🏠 В меню":
@@ -147,7 +147,8 @@ def handle_all_messages(message):
     elif message.text in ["🇺🇸 Курс USD", "🇪🇺 Курс EUR"]:
         usd, eur = get_rates()
         val = usd if "USD" in message.text else eur
-        bot.send_message(message.chat.id, f"📈 Курс: {val} руб." if val else "⚠️ Ошибка банка")
+        t = 'USD' if "USD" in message.text else 'EUR'
+        bot.send_message(message.chat.id, f"📈 Курс {t}: {val} руб." if val else "⚠️ Ошибка банка")
 
     elif message.text == "🔄 Конвертер":
         user_actions[uid] = "converting"
@@ -163,6 +164,8 @@ def handle_all_messages(message):
         res = "🗒 Твои задачи:\n" + "\n".join([f"{i+1}. {t}" for i, t in enumerate(tasks)]) if tasks else "Список пуст."
         if tasks:
             bot.send_message(message.chat.id, f"{res}\n\n💡 Нажми «❌ Удалить», чтобы стереть задачу.")
+        else:
+            bot.send_message(message.chat.id, f"{res}")
     elif message.text == "➕ Добавить":
         user_actions[uid] = "adding"
         bot.send_message(message.chat.id, "🖊 Напиши, что добавить в список (до 50 симв.):")
