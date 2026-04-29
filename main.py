@@ -258,7 +258,7 @@ def handle_all_messages(message):
             except Exception as e:
                 bot.send_message(message.chat.id, f"Ошибка: {e}")
         else:
-            if message.text != "я":
+            if text != "я":
             # Если никакого режима нет и это не команда — тогда уже пишем "Не понимаю" или просто текст
                 bot.send_message(message.chat.id, "❓ Я тебя не понимаю. Используй кнопки меню.")
             
