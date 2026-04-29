@@ -27,20 +27,8 @@ quiz_data = [
     {"question": "Какая планета самая большая?", "options": ["Марс", "Юпитер", "Сатурн"], "correct": "Юпитер"},
     {"question": "Сколько полосок на флаге США?", "options": ["10", "13", "15"], "correct": "13"},
     {"question": "На каком языке программирования обычно пишут простых ТГ ботов?", "options": ["Java", "Python", "C++"], "correct": "Python"},
-    {"question": "2+2*2?", "options": ["8", "4", "6"], "correct": "6"},
-    {"question": "Какой химический символ у золота?", "options": ["Ag", "Au", "Fe"], "correct": "Au"},
-    {"question": "Кто написал 'Преступление и наказание'?", "options": ["Толстой", "Чехов", "Достоевский"], "correct": "Достоевский"},
-    {"question": "В каком году человек впервые полетел в космос?", "options": ["1957", "1961", "1969"], "correct": "1961"},
-    {"question": "Какой океан самый большой на Земле?", "options": ["Атлантический", "Индийский", "Тихий"], "correct": "Тихий"},
-    {"question": "Сколько материков на планете Земля?", "options": ["5", "6", "7"], "correct": "6"},
-    {"question": "Какая столица у Франции?", "options": ["Лондон", "Берлин", "Париж"], "correct": "Париж"},
-    {"question": "Какое животное считается самым быстрым?", "options": ["Лев", "Гепард", "Сокол"], "correct": "Гепард"},
-    {"question": "Из чего получают изюм?", "options": ["Слива", "Абрикос", "Виноград"], "correct": "Виноград"},
-    {"question": "Как называется столица Японии?", "options": ["Пекин", "Сеул", "Токио"], "correct": "Токио"},
-    {"question": "Сколько дней в високосном году?", "options": ["364", "365", "366"], "correct": "366"},
-    {"question": "Какая самая высокая гора в мире?", "options": ["Эльбрус", "Эверест", "Килиманджаро"], "correct": "Эверест"}
+    {"question": "2+2*2?", "options": ["8", "4", "6"], "correct": "6"}
 ]
-
 
 # ПЕРСОНАЛЬНЫЕ СЛОВАРИ
 user_tasks = {}    
@@ -258,7 +246,7 @@ def handle_all_messages(message):
             except Exception as e:
                 bot.send_message(message.chat.id, f"Ошибка: {e}")
         else:
-            if text != "я":
+            if message.text != "я":
             # Если никакого режима нет и это не команда — тогда уже пишем "Не понимаю" или просто текст
                 bot.send_message(message.chat.id, "❓ Я тебя не понимаю. Используй кнопки меню.")
             
@@ -288,13 +276,23 @@ def handle_callbacks(call):
         if uid not in user_scores: user_scores[uid] = 0
         _, q_idx, ans = call.data.split('|')
         q_idx = int(q_idx)
+        
+        # 1. Сразу удаляем старый вопрос, чтобы не засорять чат
+        try:
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        except Exception:
+            pass # Если сообщение уже удалено, просто идем дальше
+            
         if ans == quiz_data[q_idx]['correct']:
             user_scores[uid] = user_scores.get(uid, 0) + 1
             res = "✅ Верно!"
         else: res = f"❌ Нет. Ответ: {quiz_data[q_idx]['correct']}"
         bot.edit_message_text(chat_id=uid, message_id=call.message.message_id, text=res)
+         # 2. Отправляем результат и тут же удаляем его через секунду
+        temp_res = bot.send_message(uid, res)
         if q_idx + 1 < len(quiz_data):
-            time.sleep(1)
+            time.sleep(1.5) # Даем пользователю время увидеть результат
+            bot.delete_message(uid, temp_res.message_id) # Удаляем результат
             show_quiz_question(call.message, q_idx + 1)
         else:
             bot.send_message(uid, f"🏁 Конец! Счет: {user_scores[uid]} из {len(quiz_data)}")
@@ -305,7 +303,9 @@ def show_quiz_question(message, q_idx):
     markup = types.InlineKeyboardMarkup()
     for opt in q['options']:
         markup.add(types.InlineKeyboardButton(opt, callback_data=f"quiz|{q_idx}|{opt}"))
-    bot.send_message(message.chat.id, f"❓ {q['question']}", reply_markup=markup)
+    # Отправляем сообщение и сохраняем его данные в переменную sent_msg
+    sent_msg = bot.send_message(message.chat.id, f"❓ {q['question']}", reply_markup=markup)
+    return sent_msg.message_id # Возвращаем ID сообщения
 
 if __name__ == '__main__':
     #print("Супер-Бот Xaash запущен!")
