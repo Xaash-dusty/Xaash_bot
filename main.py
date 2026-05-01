@@ -49,6 +49,29 @@ user_actions = {}  #Режим
 user_quiz_order = {}    #Перемешанные вопросы
 
 # --- 2. ПОМОЩНИКИ ---
+import json
+
+DB_FILE = "user_data.json"
+
+def save_data():
+    """Сохраняет словарь user_tasks в файл."""
+    with open(DB_FILE, "w", encoding="utf-8") as f:
+        json.dump(user_tasks, f, ensure_ascii=False, indent=4)
+
+def load_data():
+    """Загружает данные из файла при старте."""
+    global user_tasks
+    if os.path.exists(DB_FILE):
+        with open(DB_FILE, "r", encoding="utf-8") as f:
+            # JSON хранит ключи как строки, превращаем их обратно в числа (ID)
+            data = json.load(f)
+            user_tasks = {int(k): v for k, v in data.items()}
+    else:
+        user_tasks = {}
+
+# Сразу вызываем загрузку при старте скрипта
+load_data()
+
 def get_rates():
     """Запрашивает свежие курсы валют у ЦБ РФ."""
     try:
@@ -233,6 +256,7 @@ def handle_all_messages(message):
                 offset = timezone(timedelta(hours=3))
                 time_now = datetime.now(offset).strftime("%H:%M")
                 user_tasks[uid].append(f"[{time_now}] {message.text}")
+                save_data()
                 bot.send_message(message.chat.id, f"✅ Добавлено: [{time_now}] {message.text}")
                 user_actions[uid] = None
             else:
@@ -243,6 +267,7 @@ def handle_all_messages(message):
                 idx = int(message.text) - 1
                 if 0 <= idx < len(user_tasks[uid]):
                     removed = user_tasks[uid].pop(idx)
+                    save_data()
                     bot.send_message(message.chat.id, f"🗑 Удалено: {removed}")
                     user_actions[uid] = None
                 else:
@@ -289,6 +314,7 @@ def handle_callbacks(call):
     elif call.data in ["confirm_clear", "cancel_clear"]:
         if call.data == "confirm_clear":
             user_tasks[uid] = []
+            save_data()
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="🧹 Список полностью очищен.")
         else:
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="♻️ Действие отменено.")
@@ -320,7 +346,7 @@ def handle_callbacks(call):
             user_scores[uid] += 1
             res_text = "✅ Верно!"
         else: 
-            res_text = f"❌ Нет. Ответ: {quiz_data[q_idx]['correct']}"
+            res_text = f"❌ Нет. Ответ: {quiz_data[real_idx]['correct']}"
         res_text = f"Вопрос {q_idx + 1}: {res_text}"
         
         # 3. Отправляем временный результат
