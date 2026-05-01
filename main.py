@@ -46,6 +46,7 @@ user_tasks = {}    #Задачи
 user_scores = {}   #Счет в викторине
 user_modes = {}    #Конвертер
 user_actions = {}  #Режим
+user_quiz_order = {}    #Перемешанные вопросы
 
 # --- 2. ПОМОЩНИКИ ---
 def get_rates():
@@ -74,6 +75,12 @@ def fast_quiz(message):
     uid = message.from_user.id
     user_actions[uid] = None
     user_scores[message.from_user.id] = 0
+    # Создаем список индексов [0, 1, 2, 3] и перемешиваем его
+    indices = list(range(len(quiz_data)))
+    random.shuffle(indices)
+    # Сохраняем этот порядок для конкретного пользователя
+    user_quiz_order[uid] = indices 
+    
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.row("📝 Задачи", "💰 Валюта")
     markup.row("🎮 Викторина")
@@ -308,7 +315,8 @@ def handle_callbacks(call):
             pass
             
         # 2. Проверяем ответ
-        if ans == quiz_data[q_idx]['correct']:
+        real_idx = user_quiz_order[uid][q_idx]
+        if ans == quiz_data[real_idx]['correct']:
             user_scores[uid] += 1
             res_text = "✅ Верно!"
         else: 
@@ -335,17 +343,22 @@ def handle_callbacks(call):
             bot.send_message(uid, f"🏁 Конец! Счет: {user_scores[uid]} из {len(quiz_data)}")
 
 def show_quiz_question(message, q_idx):
-    q = quiz_data[q_idx]
-    markup = types.InlineKeyboardMarkup()
+    uid = message.chat.id
+    # Берем реальный номер вопроса из нашего перемешанного списка
+    real_idx = user_quiz_order[uid][q_idx] 
+    q = quiz_data[real_idx]
     
-    # Кнопки с вариантами
-    for opt in q['options']:
+    # Перемешиваем варианты (как делали раньше)
+    options = list(q['options'])
+    random.shuffle(options)
+    
+    markup = types.InlineKeyboardMarkup()
+    for opt in options:
+        # В callback_data передаем q_idx (номер шага), а не реальный индекс
         markup.add(types.InlineKeyboardButton(opt, callback_data=f"quiz|{q_idx}|{opt}"))
     
-    # Кнопка отмены
-    markup.add(types.InlineKeyboardButton("🚪 Прервать викторину", callback_data="quiz_stop"))
-    
-    bot.send_message(message.chat.id, f"❓ {q['question']}", reply_markup=markup)
+    markup.add(types.InlineKeyboardButton("🚪 Прервать", callback_data="quiz_stop"))
+    bot.send_message(uid, f"❓ {q['question']}", reply_markup=markup)
 
 
 if __name__ == '__main__':
