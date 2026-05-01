@@ -108,7 +108,7 @@ def help_command(message):
         "• Удобный конвертер из рублей.\n\n"
         
         f"🎮 **ВИКТОРИНА**\n"
-        f"• Тест на {len(quiz_data)} вопроса. Проверь себя!\n"
+        f"• Тест на {len(quiz_data)} вопросов. Проверь себя!\n"
         "• Быстрый старт: /quiz\n\n"
         
         "⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯\n"
@@ -283,40 +283,50 @@ def handle_callbacks(call):
         else:
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="♻️ Действие отменено.")
     
-    elif call.data.startswith('quiz'):
+        elif call.data.startswith('quiz'):
         if uid not in user_scores: user_scores[uid] = 0
         _, q_idx, ans = call.data.split('|')
         q_idx = int(q_idx)
         
-        # 1. Сразу удаляем старый вопрос, чтобы не засорять чат
+        # 1. Удаляем сообщение с вопросом и кнопками
         try:
             bot.delete_message(call.message.chat.id, call.message.message_id)
         except Exception:
-            pass # Если сообщение уже удалено, просто идем дальше
+            pass
             
+        # 2. Проверяем ответ
         if ans == quiz_data[q_idx]['correct']:
-            user_scores[uid] = user_scores.get(uid, 0) + 1
-            res = "✅ Верно!"
-        else: res = f"❌ Нет. Ответ: {quiz_data[q_idx]['correct']}"
-        bot.edit_message_text(chat_id=uid, message_id=call.message.message_id, text=res)
-         # 2. Отправляем результат и тут же удаляем его через секунду
-        temp_res = bot.send_message(uid, res)
+            user_scores[uid] += 1
+            res_text = "✅ Верно!"
+        else: 
+            res_text = f"❌ Нет. Ответ: {quiz_data[q_idx]['correct']}"
+        
+        # 3. Отправляем временный результат
+        temp_res = bot.send_message(uid, res_text)
+        
+        # 4. Пауза, чтобы юзер успел прочитать
+        time.sleep(1.5) 
+        
+        # 5. Удаляем временный результат
+        try:
+            bot.delete_message(uid, temp_res.message_id)
+        except Exception:
+            pass
+
+        # 6. Либо следующий вопрос, либо финал
         if q_idx + 1 < len(quiz_data):
-            time.sleep(1.5) # Даем пользователю время увидеть результат
-            bot.delete_message(uid, temp_res.message_id) # Удаляем результат
             show_quiz_question(call.message, q_idx + 1)
         else:
             bot.send_message(uid, f"🏁 Конец! Счет: {user_scores[uid]} из {len(quiz_data)}")
 
 def show_quiz_question(message, q_idx):
-    '''Достаем данные вопроса (текст, варианты) из списка по индексу'''
     q = quiz_data[q_idx]
     markup = types.InlineKeyboardMarkup()
     for opt in q['options']:
         markup.add(types.InlineKeyboardButton(opt, callback_data=f"quiz|{q_idx}|{opt}"))
-    # Отправляем сообщение и сохраняем его данные в переменную sent_msg
-    sent_msg = bot.send_message(message.chat.id, f"❓ {q['question']}", reply_markup=markup)
-    return sent_msg.message_id # Возвращаем ID сообщения
+    
+    bot.send_message(message.chat.id, f"❓ {q['question']}", reply_markup=markup)
+
 
 if __name__ == '__main__':
     #print("Супер-Бот Xaash запущен!")
