@@ -302,7 +302,8 @@ def handle_callbacks(call):
             res_text = f"❌ Нет. Ответ: {quiz_data[q_idx]['correct']}"
         
         # 3. Отправляем временный результат
-        temp_res = bot.send_message(uid, res_text)
+        #temp_res = bot.send_message(uid, res_text)
+        bot.send_message(uid, res_text)
         
         # 4. Пауза, чтобы юзер успел прочитать
         #time.sleep(1.5) 
