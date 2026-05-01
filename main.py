@@ -80,15 +80,19 @@ def fast_quiz(message):
     bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего {len(quiz_data)} вопросов. Удачи!\n\n/help — вызвать справку.")
     show_quiz_question(message, 0)
     
-# @bot.message_handler(commands=['quiz'])
-# def fast_quiz(message):
-    # """Быстрый переход к викторине через /quiz."""
-    # user_scores[message.from_user.id] = 0
-    # markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    # markup.row("📝 Задачи", "💰 Валюта")
-    # markup.row("🎮 Викторина")
-    # bot.send_message(message.chat.id, f"🕹 Начинаем викторину!Всего вопросов {len(quiz_data)}. Удачи!\n\n/help — вызвать справку.")
-    # show_quiz_question(message, 0)
+@bot.message_handler(commands=['rates'])
+def fast_rates(message):
+    """Быстрый переход к валютам через /rates."""
+    uid = message.from_user.id
+    user_actions[uid] = None
+    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.add("🇺🇸 Курс USD", "🇪🇺 Курс EUR", "🔄 Конвертер", "🏠 В меню")
+    bot.send_message(
+        message.chat.id, 
+        "📍 Раздел ВАЛЮТА\nВыбери курс или нажми «Конвертер»\n\n/help — вызвать справку.", 
+        reply_markup=markup
+    )
+
 
 @bot.message_handler(commands=['help'])
 def help_command(message):
@@ -105,7 +109,8 @@ def help_command(message):
         
         "📈 **ВАЛЮТА**\n"
         "• Актуальные курсы USD и EUR.\n"
-        "• Удобный конвертер из рублей.\n\n"
+        "• Удобный конвертер из рублей.\n"
+        "• Быстрый доступ: /rates\n\n"
         
         f"🎮 **ВИКТОРИНА**\n"
         f"• Тест на {len(quiz_data)} вопросов. Проверь себя!\n"
@@ -166,9 +171,7 @@ def handle_all_messages(message):
     if message.text == "📝 Задачи":
         fast_tasks(message)
     elif message.text == "💰 Валюта":
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup.add("🇺🇸 Курс USD", "🇪🇺 Курс EUR", "🔄 Конвертер", "🏠 В меню")
-        bot.send_message(message.chat.id, "📍 Раздел ВАЛЮТА\nВыбери курс или нажми «Конвертер»\n\n/help — вызвать справку.", reply_markup=markup)
+        fast_rates(message)
     elif message.text == "🎮 Викторина":
         fast_quiz(message)
     elif message.text == "🏠 В меню":
