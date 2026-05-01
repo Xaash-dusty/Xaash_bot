@@ -42,10 +42,10 @@ quiz_data = [
 ]
 
 # ПЕРСОНАЛЬНЫЕ СЛОВАРИ
-user_tasks = {}    
-user_scores = {}   
-user_modes = {}    
-user_actions = {}  
+user_tasks = {}    #Задачи
+user_scores = {}   #Счет в викторине
+user_modes = {}    #Конвертер
+user_actions = {}  #Режим
 
 # --- 2. ПОМОЩНИКИ ---
 def get_rates():
@@ -286,6 +286,16 @@ def handle_callbacks(call):
         else:
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="♻️ Действие отменено.")
     
+    elif call.data == "quiz_stop":
+        # Удаляем сообщение с вопросом, чтобы оно не висело
+        try:
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        except:
+            pass
+        
+        bot.send_message(uid, "🚫 Викторина остановлена. Возвращаемся в меню.")
+        main_menu(call) # Передаем сам объект call
+
     elif call.data.startswith('quiz'):
         if uid not in user_scores: user_scores[uid] = 0
         _, q_idx, ans = call.data.split('|')
@@ -303,6 +313,7 @@ def handle_callbacks(call):
             res_text = "✅ Верно!"
         else: 
             res_text = f"❌ Нет. Ответ: {quiz_data[q_idx]['correct']}"
+        res_text = f"Вопрос {q_idx + 1}: {res_text}"
         
         # 3. Отправляем временный результат
         #temp_res = bot.send_message(uid, res_text)
@@ -326,11 +337,15 @@ def handle_callbacks(call):
 def show_quiz_question(message, q_idx):
     q = quiz_data[q_idx]
     markup = types.InlineKeyboardMarkup()
+    
+    # Кнопки с вариантами
     for opt in q['options']:
         markup.add(types.InlineKeyboardButton(opt, callback_data=f"quiz|{q_idx}|{opt}"))
     
+    # Кнопка отмены
+    markup.add(types.InlineKeyboardButton("🚪 Прервать викторину", callback_data="quiz_stop"))
+    
     bot.send_message(message.chat.id, f"❓ {q['question']}", reply_markup=markup)
-
 
 
 if __name__ == '__main__':
