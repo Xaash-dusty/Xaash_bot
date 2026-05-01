@@ -285,12 +285,12 @@ def handle_callbacks(call):
     
     elif call.data.startswith('quiz'):
         if uid not in user_scores: user_scores[uid] = 0
-            _, q_idx, ans = call.data.split('|')
+        _, q_idx, ans = call.data.split('|')
         q_idx = int(q_idx)
         
         # 1. Удаляем сообщение с вопросом и кнопками
         try:
-        bot.delete_message(call.message.chat.id, call.message.message_id)
+            bot.delete_message(call.message.chat.id, call.message.message_id)
         except Exception:
             pass
             
@@ -326,6 +326,7 @@ def show_quiz_question(message, q_idx):
         markup.add(types.InlineKeyboardButton(opt, callback_data=f"quiz|{q_idx}|{opt}"))
     
     bot.send_message(message.chat.id, f"❓ {q['question']}", reply_markup=markup)
+
 
 
 if __name__ == '__main__':
