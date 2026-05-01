@@ -283,41 +283,41 @@ def handle_callbacks(call):
         else:
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="♻️ Действие отменено.")
     
-        elif call.data.startswith('quiz'):
-            if uid not in user_scores: user_scores[uid] = 0
+    elif call.data.startswith('quiz'):
+        if uid not in user_scores: user_scores[uid] = 0
             _, q_idx, ans = call.data.split('|')
-            q_idx = int(q_idx)
+        q_idx = int(q_idx)
+        
+        # 1. Удаляем сообщение с вопросом и кнопками
+        try:
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        except Exception:
+            pass
             
-            # 1. Удаляем сообщение с вопросом и кнопками
-            try:
-                bot.delete_message(call.message.chat.id, call.message.message_id)
-            except Exception:
-                pass
-                
-            # 2. Проверяем ответ
-            if ans == quiz_data[q_idx]['correct']:
-                user_scores[uid] += 1
-                res_text = "✅ Верно!"
-            else: 
-                res_text = f"❌ Нет. Ответ: {quiz_data[q_idx]['correct']}"
-            
-            # 3. Отправляем временный результат
-            temp_res = bot.send_message(uid, res_text)
-            
-            # 4. Пауза, чтобы юзер успел прочитать
-            time.sleep(1.5) 
-            
-            # 5. Удаляем временный результат
-            try:
-                bot.delete_message(uid, temp_res.message_id)
-            except Exception:
-                pass
+        # 2. Проверяем ответ
+        if ans == quiz_data[q_idx]['correct']:
+            user_scores[uid] += 1
+            res_text = "✅ Верно!"
+        else: 
+            res_text = f"❌ Нет. Ответ: {quiz_data[q_idx]['correct']}"
+        
+        # 3. Отправляем временный результат
+        temp_res = bot.send_message(uid, res_text)
+        
+        # 4. Пауза, чтобы юзер успел прочитать
+        time.sleep(1.5) 
+        
+        # 5. Удаляем временный результат
+        try:
+            bot.delete_message(uid, temp_res.message_id)
+        except Exception:
+            pass
 
-            # 6. Либо следующий вопрос, либо финал
-            if q_idx + 1 < len(quiz_data):
-                show_quiz_question(call.message, q_idx + 1)
-            else:
-                bot.send_message(uid, f"🏁 Конец! Счет: {user_scores[uid]} из {len(quiz_data)}")
+        # 6. Либо следующий вопрос, либо финал
+        if q_idx + 1 < len(quiz_data):
+            show_quiz_question(call.message, q_idx + 1)
+        else:
+            bot.send_message(uid, f"🏁 Конец! Счет: {user_scores[uid]} из {len(quiz_data)}")
 
 def show_quiz_question(message, q_idx):
     q = quiz_data[q_idx]
