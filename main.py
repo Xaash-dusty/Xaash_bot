@@ -319,15 +319,18 @@ def handle_callbacks(call):
         else:
             bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="♻️ Действие отменено.")
     
-    elif call.data == "quiz_stop":
-        # Удаляем сообщение с вопросом, чтобы оно не висело
+    elif call.data.startswith("quiz_stop"):
+        # Достаем индекс вопроса из callback_data
+        _, q_idx = call.data.split('|')
+        q_idx = int(q_idx)
         try:
             bot.delete_message(call.message.chat.id, call.message.message_id)
         except:
             pass
-        
-        bot.send_message(uid, "🚫 Викторина остановлена. Возвращаемся в меню.")
-        main_menu(call) # Передаем сам объект call
+        # Теперь q_idx доступен, и мы показываем, сколько пройдено
+        bot.send_message(uid, f"🚫 Викторина остановлена.\n📊 Ваш результат: {user_scores.get(uid, 0)} из {q_idx}")
+        main_menu(call)
+
 
     elif call.data.startswith('quiz'):
         if uid not in user_scores: user_scores[uid] = 0
@@ -383,7 +386,7 @@ def show_quiz_question(message, q_idx):
         # В callback_data передаем q_idx (номер шага), а не реальный индекс
         markup.add(types.InlineKeyboardButton(opt, callback_data=f"quiz|{q_idx}|{opt}"))
     
-    markup.add(types.InlineKeyboardButton("🚪 Прервать", callback_data="quiz_stop"))
+    markup.add(types.InlineKeyboardButton("🚪 Прервать", callback_data=f"quiz_stop|{q_idx}"))
     bot.send_message(uid, f"❓ {q['question']}", reply_markup=markup)
 
 
