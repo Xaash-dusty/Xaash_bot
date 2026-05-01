@@ -305,13 +305,13 @@ def handle_callbacks(call):
         temp_res = bot.send_message(uid, res_text)
         
         # 4. Пауза, чтобы юзер успел прочитать
-        time.sleep(1.5) 
+        #time.sleep(1.5) 
         
         # 5. Удаляем временный результат
-        try:
-            bot.delete_message(uid, temp_res.message_id)
-        except Exception:
-            pass
+        # try:
+            # bot.delete_message(uid, temp_res.message_id)
+        # except Exception:
+            # pass
 
         # 6. Либо следующий вопрос, либо финал
         if q_idx + 1 < len(quiz_data):
